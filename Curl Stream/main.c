@@ -29,6 +29,8 @@ int main() {
     // Set the callback function to handle incoming data
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
 
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "Hello, World!");
+
     // Set the username and password for basic authentication
     //curl_easy_setopt(curl, CURLOPT_USERPWD, "root:root");
 
