@@ -1,45 +1,53 @@
 package com.example.stream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 @RestController
 public class StreamController {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
+    private final KafkaConsumerService kafkaConsumerService;
 
-    @GetMapping("/stream")
-    public void stream(HttpServletResponse response) throws IOException {
+    public StreamController(KafkaConsumerService kafkaConsumerService) {
+        this.kafkaConsumerService = kafkaConsumerService;
+    }
+
+    @GetMapping("/stream/{topic}")
+    public void stream(@PathVariable String topic, HttpServletResponse response) throws IOException {
         response.setContentType("text/event-stream");
         response.setCharacterEncoding("UTF-8");
 
         OutputStreamWriter writer = new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8);
 
-        for (int i = 1; i <= 10; i++) {
-            StreamMessage msg = new StreamMessage(i, "Mensagem #" + i);
-            String json = objectMapper.writeValueAsString(msg);
+        BlockingQueue<String> messageQueue = new LinkedBlockingQueue<>();
 
-            writer.write(json + "\n");
-            writer.flush();
+        kafkaConsumerService.consumeAsync(topic, messageQueue);
 
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
+        try {
+            while (true) {
+                String message = messageQueue.poll(Duration.ofSeconds(1).toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS);
+                if (message != null) {
+                    StreamMessage msg = new StreamMessage(message);
+                    writer.write(objectMapper.writeValueAsString(msg)+"\n");
+                    writer.flush();
+                }
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            writer.write(objectMapper.writeValueAsString(new StreamMessage("Stream interrompida")));
+        } finally {
+            writer.close();
         }
-
-        writer.write(objectMapper.writeValueAsString(new StreamMessage(-1, "Fim da stream")) + "\n");
-        writer.flush();
-        writer.close();
     }
-
-
 }

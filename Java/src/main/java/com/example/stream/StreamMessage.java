@@ -1,11 +1,13 @@
 package com.example.stream;
 
+import java.util.UUID;
+
 public class StreamMessage {
-    public int id;
+    public UUID id;
     public String mensagem;
 
-    public StreamMessage(int id, String mensagem) {
-        this.id = id;
+    public StreamMessage(String mensagem) {
+        this.id = UUID.randomUUID();
         this.mensagem = mensagem;
     }
 
