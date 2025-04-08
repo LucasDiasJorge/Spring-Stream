@@ -33,6 +33,7 @@ public class KafkaConsumerService {
         props.put("group.id", "stream-group");
         props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("auto.offset.reset", "latest");
 
         return new KafkaConsumer<>(props);
     }

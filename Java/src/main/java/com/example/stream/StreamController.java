@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -31,21 +32,39 @@ public class StreamController {
         OutputStreamWriter writer = new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8);
 
         BlockingQueue<String> messageQueue = new LinkedBlockingQueue<>();
-
         kafkaConsumerService.consumeAsync(topic, messageQueue);
 
         try {
             while (true) {
-                String message = messageQueue.poll(Duration.ofSeconds(1).toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS);
-                if (message != null) {
-                    StreamMessage msg = new StreamMessage(message);
-                    writer.write(objectMapper.writeValueAsString(msg)+"\n");
-                    writer.flush();
+                String rawMessage = messageQueue.poll(Duration.ofSeconds(1).toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS);
+                if (rawMessage != null) {
+                    try {
+                        StreamMessage msg = objectMapper.readValue(rawMessage, StreamMessage.class);
+                        String json = objectMapper.writeValueAsString(msg);
+                        writer.write(json + "\n");
+                        writer.flush();
+                    } catch (Exception e) {
+                        StreamMessage errorMsg = new StreamMessage();
+                        errorMsg.from = "StreamController";
+                        errorMsg.data = Map.of("error", "Invalid message format", "raw", rawMessage);
+                        errorMsg.deliveredAt = new java.util.Date();
+                        errorMsg.id = java.util.UUID.randomUUID();
+
+                        String json = objectMapper.writeValueAsString(errorMsg);
+                        writer.write(json + "\n");
+                        writer.flush();
+                    }
                 }
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            writer.write(objectMapper.writeValueAsString(new StreamMessage("Stream interrompida")));
+            StreamMessage msg = new StreamMessage();
+            msg.from = "StreamController";
+            msg.deliveredAt = new java.util.Date();
+            msg.id = java.util.UUID.randomUUID();
+            msg.data = Map.of("info", "Stream interrompida");
+
+            writer.write(objectMapper.writeValueAsString(msg) + "\n");
         } finally {
             writer.close();
         }
