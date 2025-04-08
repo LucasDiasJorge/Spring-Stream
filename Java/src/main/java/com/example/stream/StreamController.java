@@ -29,7 +29,7 @@ public class StreamController {
             writer.flush();
 
             try {
-                Thread.sleep(1000); // simula tempo de processamento
+                Thread.sleep(1000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -41,17 +41,5 @@ public class StreamController {
         writer.close();
     }
 
-    // Classe interna (ou pode colocar em outro arquivo)
-    static class StreamMessage {
-        public int id;
-        public String mensagem;
 
-        public StreamMessage(int id, String mensagem) {
-            this.id = id;
-            this.mensagem = mensagem;
-        }
-
-        // Jackson precisa de construtor padrão também
-        public StreamMessage() {}
-    }
 }
