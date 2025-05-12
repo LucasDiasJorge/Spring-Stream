@@ -26,8 +26,8 @@ public class StreamController {
 
     @GetMapping("/stream/{topic}")
     public void stream(@PathVariable String topic, HttpServletResponse response) throws IOException {
-        response.setContentType("text/event-stream");
-        response.setCharacterEncoding("UTF-8");
+        response.setContentType("application/x-ndjson");
+        response.setCharacterEncoding("utf-8");
 
         OutputStreamWriter writer = new OutputStreamWriter(response.getOutputStream(), StandardCharsets.UTF_8);
 
@@ -41,7 +41,7 @@ public class StreamController {
                     try {
                         StreamMessage msg = objectMapper.readValue(rawMessage, StreamMessage.class);
                         String json = objectMapper.writeValueAsString(msg);
-                        writer.write(json + "\n");
+                        writer.write(json + "\n\n");
                         writer.flush();
                     } catch (Exception e) {
                         StreamMessage errorMsg = new StreamMessage();
@@ -51,7 +51,7 @@ public class StreamController {
                         errorMsg.id = java.util.UUID.randomUUID();
 
                         String json = objectMapper.writeValueAsString(errorMsg);
-                        writer.write(json + "\n");
+                        writer.write(json + "\n\n");
                         writer.flush();
                     }
                 }
